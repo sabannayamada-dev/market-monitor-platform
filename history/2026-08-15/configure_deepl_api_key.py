@@ -10,7 +10,7 @@ from pathlib import Path
 DEFAULT_HOST = "160.251.252.249"
 DEFAULT_USER = "app"
 DEFAULT_SSH_KEY = Path(
-    r"C:\Users\saban\Documents\Codex\2026-08-14\new-chat\work\ssh\patent-news-monitor-key.pem"
+    r"C:\Users\saban\Downloads\この中の鍵大事だから消すな\patent-news-monitor-key.pem"
 )
 REMOTE_SECRET = "/var/lib/gdelt-news-monitor/deepl_api_key"
 

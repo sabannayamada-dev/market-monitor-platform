@@ -9,7 +9,7 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect(
     "160.251.252.249",
     username="app",
-    key_filename=r"C:\Users\saban\Documents\Codex\2026-08-14\new-chat\work\ssh\patent-news-monitor-key.pem",
+    key_filename=r"C:\Users\saban\Downloads\この中の鍵大事だから消すな\patent-news-monitor-key.pem",
     timeout=15,
 )
 with client.open_sftp() as sftp:
