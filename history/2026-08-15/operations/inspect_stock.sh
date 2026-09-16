@@ -1,0 +1,5 @@
+sudo sqlite3 -json /var/lib/stock-bottom-monitor/notifications.sqlite3 "SELECT * FROM monitor_runs ORDER BY started_at DESC LIMIT 2;"
+sudo sqlite3 -json /var/lib/stock-bottom-monitor/notifications.sqlite3 "SELECT delivery_status, COUNT(*) AS count, MAX(sent_at) AS latest_sent FROM bottom_signals GROUP BY delivery_status;"
+sudo sqlite3 -json /var/lib/stock-bottom-monitor/notifications.sqlite3 "SELECT symbol, stable_date, delivery_status, sent_at, last_error FROM bottom_signals WHERE run_id='20260816_215345' ORDER BY symbol;"
+sudo sqlite3 /var/lib/market-monitor/platform.sqlite3 ".schema service_runs"
+sudo sqlite3 -json /var/lib/market-monitor/platform.sqlite3 "SELECT * FROM service_runs ORDER BY started_at DESC LIMIT 4;"

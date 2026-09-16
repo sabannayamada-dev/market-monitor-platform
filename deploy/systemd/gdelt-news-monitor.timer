@@ -1,0 +1,11 @@
+[Unit]
+Description=Check GDELT collection and emergency schedules every five minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=5min
+AccuracySec=15s
+Unit=gdelt-news-monitor.service
+
+[Install]
+WantedBy=timers.target

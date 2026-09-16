@@ -1,0 +1,31 @@
+[Unit]
+Description=Daily research paper discovery and digest monitor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python -u monitorctl.py run research-paper
+TimeoutStartSec=45m
+StateDirectory=market-monitor research-paper-monitor
+StateDirectoryMode=0750
+LogsDirectory=research-paper-monitor
+LogsDirectoryMode=0750
+UMask=0027
+Nice=8
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/research-paper-monitor /var/log/research-paper-monitor /var/lib/market-monitor
+StandardOutput=append:/var/log/research-paper-monitor/daily.log
+StandardError=append:/var/log/research-paper-monitor/daily-error.log
+
+[Install]
+WantedBy=multi-user.target

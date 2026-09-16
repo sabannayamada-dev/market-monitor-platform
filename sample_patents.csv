@@ -1,0 +1,4 @@
+publication_number,application_number,family_id,title,abstract,claims,applicants,inventors,cpc_codes,ipc_codes,publication_date,priority_date,country_codes,citation_count,family_size,claim_count,legal_status,source_url
+JP2026000001A,JP2025000001,FAM-A,次世代パワー半導体の低損失ゲート構造,炭化ケイ素半導体のオン抵抗を低減する構造,基板と絶縁膜と電極を含む半導体装置,北陸電子株式会社,山田太郎,H10D30/60,H01L29/78,2026-07-14,2025-01-10,JP|US|EP,8,3,18,published,https://example.invalid/JP2026000001A
+US2026000002A1,US2025000002,FAM-A,Low loss gate structure for power semiconductor,Family member of the silicon carbide semiconductor invention,,HOKURIKU ELECTRONICS CO LTD,John Smith,H10D30/60,H01L29/78,2026-07-12,2025-01-10,US,2,3,16,published,https://example.invalid/US2026000002A1
+JP2026000003A,JP2025000003,,社員食堂予約システム,予約情報に基づいて食数を管理する,,東都サービス株式会社,佐藤花子,G06Q10/02,G06Q10/02,2026-07-13,2025-02-01,JP,0,1,5,published,https://example.invalid/JP2026000003A

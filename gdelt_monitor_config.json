@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "collector": {
+    "source": "web_ngrams",
+    "lookback_minutes": 150,
+    "max_records_per_query": 25,
+    "request_timeout_seconds": 30,
+    "max_retries": 1,
+    "initial_backoff_seconds": 60.0,
+    "max_backoff_seconds": 600.0,
+    "publication_lag_minutes": 5,
+    "web_ngrams_root": "https://storage.googleapis.com/data.gdeltproject.org/gdeltv5/weblegacy/ngrams/",
+    "head_request_spacing_seconds": 0.1,
+    "file_download_spacing_seconds": 2.0
+  },
+  "adaptive_control": {
+    "fixed_interval_minutes": 120,
+    "fixed_cooldown_hours": 1,
+    "query_spacing_seconds": 20,
+    "lookback_buffer_minutes": 30,
+    "scheduler_heartbeat_minutes": 5
+  },
+  "emergency_monitor": {
+    "enabled": true,
+    "interval_minutes": 15,
+    "retry_interval_minutes": 5,
+    "lookback_minutes": 30,
+    "corroboration_window_minutes": 90,
+    "alert_cooldown_minutes": 360,
+    "minimum_independent_domains": 2,
+    "minimum_independent_titles": 2,
+    "head_request_spacing_seconds": 0.1,
+    "toc_download_spacing_seconds": 0.5,
+    "toc_cache_retention_hours": 72,
+    "ai_review": {
+      "enabled": true,
+      "self_test_on_startup": true,
+      "model": "gpt-5-nano",
+      "reasoning_effort": "minimal",
+      "max_completion_tokens": 500,
+      "request_timeout_seconds": 45,
+      "market_impact_threshold": 85,
+      "urgency_threshold": 85,
+      "daily_request_limit": 500,
+      "monthly_request_limit": 30000,
+      "monthly_budget_usd": 7.0,
+      "input_usd_per_million": 0.05,
+      "output_usd_per_million": 0.40
+    },
+    "trusted_domains": [
+      "reuters.com",
+      "apnews.com",
+      "bbc.com",
+      "aljazeera.com"
+    ]
+  },
+  "global_news_digest": {
+    "enabled": true,
+    "item_count": 2,
+    "candidates_per_file": 6,
+    "minimum_rule_score": 25,
+    "maximum_title_characters": 240,
+    "require_trusted_source": true,
+    "max_ai_candidates": 30,
+    "ai_enabled": true,
+    "model": "gpt-5-nano",
+    "reasoning_effort": "minimal",
+    "max_completion_tokens": 700,
+    "request_timeout_seconds": 45,
+    "retention_days": 30
+  },
+  "stability_detection": {
+    "enabled": false,
+    "window_hours": 72,
+    "query_margin_hours": 6,
+    "minimum_samples": 12,
+    "maximum_latest_age_hours": 6,
+    "maximum_x_range_minutes": 8,
+    "maximum_y_range_hours": 1,
+    "maximum_z_range_seconds": 5,
+    "plateau_x_range_minutes": 2,
+    "plateau_y_range_hours": 0.5,
+    "plateau_z_range_seconds": 2,
+    "minimum_reversals": 2,
+    "realert_x_distance_minutes": 8,
+    "realert_y_distance_hours": 1,
+    "realert_z_distance_seconds": 5
+  },
+  "digest_hour_jst": 18,
+  "digest_score_threshold": 40,
+  "urgent_score_threshold": 90,
+  "broad_queries": [
+    {
+      "name": "重大悪材料",
+      "profile": "major_negative",
+      "severity": 55,
+      "query": "(recall OR cyberattack OR fraud OR lawsuit OR investigation OR \"factory shutdown\" OR \"data breach\" OR \"リコール\" OR \"不正\" OR \"訴訟\" OR \"情報漏洩\" OR \"サイバー攻撃\" OR \"操業停止\" OR \"行政処分\" OR \"下方修正\" OR \"契約解除\" OR \"製品回収\")"
+    },
+    {
+      "name": "小型悪材料",
+      "profile": "minor_negative",
+      "severity": 35,
+      "query": "(\"food poisoning\" OR hygiene OR contamination OR boycott OR \"viral video\" OR misconduct OR \"食中毒\" OR \"衛生問題\" OR \"汚染\" OR \"不祥事\")"
+    },
+    {
+      "name": "好材料・技術",
+      "profile": "positive_material",
+      "severity": 40,
+      "query": "(\"large order\" OR partnership OR approval OR breakthrough OR \"new contract\" OR acquisition OR \"業務提携\" OR \"資本提携\" OR \"共同開発\" OR \"大型受注\" OR \"供給契約\" OR \"採用決定\" OR \"承認取得\" OR \"買収\" OR \"増産\" OR \"新工場\" OR \"量産開始\")"
+    },
+    {
+      "name": "マクロ・供給網",
+      "profile": "macro_risk",
+      "severity": 35,
+      "query": "(sanctions OR \"export restriction\" OR \"declares war\" OR \"declared war\" OR \"military strike\" OR \"air strike\" OR \"missile strike\" OR \"labor strike\" OR \"workers strike\" OR \"union strike\" OR \"supply disruption\" OR \"port closure\" OR \"経済制裁\" OR \"輸出規制\" OR \"宣戦布告\" OR \"軍事攻撃\" OR \"供給停止\" OR \"港湾閉鎖\" OR \"海峡閉鎖\")"
+    },
+    {
+      "name": "日本語・重大悪材料",
+      "profile": "major_negative",
+      "severity": 55,
+      "query": "(リコール OR 不正会計 OR 訴訟提起 OR 情報漏洩 OR サイバー攻撃 OR 操業停止 OR 行政処分 OR 下方修正 OR 契約解除 OR 製品回収) sourcelang:japanese"
+    },
+    {
+      "name": "日本語・小型悪材料",
+      "profile": "minor_negative",
+      "severity": 35,
+      "query": "(食中毒 OR 衛生問題 OR 異物混入 OR 品質不正 OR 従業員不祥事) sourcelang:japanese"
+    },
+    {
+      "name": "日本語・好材料・技術",
+      "profile": "positive_material",
+      "severity": 40,
+      "query": "(業務提携 OR 資本提携 OR 共同開発 OR 大型受注 OR 供給契約 OR 採用決定 OR 承認取得 OR 企業買収 OR 生産増強 OR 新工場建設 OR 量産開始) sourcelang:japanese"
+    },
+    {
+      "name": "日本語・マクロ・供給網",
+      "profile": "macro_risk",
+      "severity": 35,
+      "query": "(経済制裁 OR 輸出規制 OR 宣戦布告 OR 軍事攻撃 OR 供給停止 OR 港湾閉鎖 OR 海峡閉鎖 OR 空港閉鎖 OR 物流停止) sourcelang:japanese"
+    }
+  ],
+  "positive_keywords": [
+    "large order", "partnership", "approval", "breakthrough", "new contract", "acquisition",
+    "大型受注", "提携", "承認", "増産"
+  ],
+  "negative_keywords": [
+    "recall", "cyberattack", "fraud", "lawsuit", "factory shutdown", "data breach",
+    "food poisoning", "boycott", "リコール", "不正", "訴訟", "操業停止", "情報漏洩", "食中毒"
+  ],
+  "ai": {
+    "gpt_model": "gpt-5-nano",
+    "gpt_score_threshold": 60,
+    "daily_gpt_limit": 3,
+    "gemini_model": "gemini-3.1-flash-lite",
+    "gemini_score_threshold": 90,
+    "daily_gemini_limit": 1
+  }
+}

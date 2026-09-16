@@ -1,0 +1,12 @@
+[Unit]
+Description=Run patent materiality monitor every morning
+
+[Timer]
+OnCalendar=*-*-* 07:15:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=180
+Unit=patent-monitor-daily.service
+
+[Install]
+WantedBy=timers.target
+

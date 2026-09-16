@@ -1,0 +1,24 @@
+[Unit]
+Description=Continuous EPO patent history backfill
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python /opt/patent-news-monitor/app/collect_patent_backfill_forever.py --output-dir /var/lib/patent-news-monitor/backfill --company-master /opt/patent-news-monitor/app/patent_company_master.csv --config /opt/patent-news-monitor/app/patent_monitor_config.json --window-days 7 --max-per-company 50 --max-windows 0
+Restart=on-failure
+RestartSec=60
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryHigh=700M
+MemoryMax=850M
+StandardOutput=append:/var/log/patent-news-monitor/backfill.log
+StandardError=append:/var/log/patent-news-monitor/backfill-error.log
+
+[Install]
+WantedBy=multi-user.target

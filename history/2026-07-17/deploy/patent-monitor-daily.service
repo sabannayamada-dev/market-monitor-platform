@@ -1,0 +1,21 @@
+[Unit]
+Description=Patent materiality monitor daily run
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python /opt/patent-news-monitor/app/patent_monitor_daily.py
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+StandardOutput=append:/var/log/patent-news-monitor/daily.log
+StandardError=append:/var/log/patent-news-monitor/daily-error.log
+
+[Install]
+WantedBy=multi-user.target
+

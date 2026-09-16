@@ -1,0 +1,11 @@
+[Unit]
+Description=Run research paper monitor daily at 10:30 JST
+
+[Timer]
+OnCalendar=*-*-* 10:30:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=45
+Unit=research-paper-daily.service
+
+[Install]
+WantedBy=timers.target

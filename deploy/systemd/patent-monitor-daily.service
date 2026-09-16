@@ -1,0 +1,27 @@
+[Unit]
+Description=Daily patent materiality monitor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python -u monitorctl.py run patent-materiality
+TimeoutStartSec=8h
+StateDirectory=market-monitor
+StateDirectoryMode=0750
+UMask=0027
+Nice=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/patent-news-monitor /var/log/patent-news-monitor /var/lib/market-monitor
+StandardOutput=append:/var/log/patent-news-monitor/daily.log
+StandardError=append:/var/log/patent-news-monitor/daily-error.log
+
+[Install]
+WantedBy=multi-user.target

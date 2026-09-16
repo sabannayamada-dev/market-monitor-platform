@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "collection": {
+    "lookback_days": 7,
+    "initial_baseline_days": 30,
+    "auto_baseline_on_first_run": true,
+    "minimum_successful_sources_for_baseline": 1
+  },
+  "sources": {
+    "openalex": {
+      "enabled": true,
+      "base_url": "https://api.openalex.org/works",
+      "per_page": 100,
+      "max_pages_per_profile": 1,
+      "timeout_seconds": 30,
+      "user_agent": "research-paper-monitor/1.0",
+      "rate_limit": {"initial_cooldown_minutes": 20, "max_cooldown_minutes": 20}
+    },
+    "arxiv": {
+      "enabled": true,
+      "base_url": "https://export.arxiv.org/api/query",
+      "max_results_per_profile": 100,
+      "request_spacing_seconds": 10,
+      "retry_after_cooldown_once": true,
+      "retry_wait_minutes": 20,
+      "timeout_seconds": 45,
+      "user_agent": "research-paper-monitor/1.0",
+      "rate_limit": {"initial_cooldown_minutes": 20, "max_cooldown_minutes": 20}
+    },
+    "jstage": {
+      "enabled": true,
+      "base_url": "https://api.jstage.jst.go.jp/searchapi/do",
+      "max_results_per_query": 200,
+      "request_spacing_seconds": 2,
+      "timeout_seconds": 45,
+      "user_agent": "research-paper-monitor/1.0",
+      "rate_limit": {"initial_cooldown_minutes": 20, "max_cooldown_minutes": 20}
+    }
+  },
+  "scoring": {
+    "digest_threshold": 50,
+    "priority_threshold": 70
+  },
+  "digest": {
+    "max_items": 15,
+    "priority_max_items": 5
+  },
+  "ai": {
+    "enabled": true,
+    "model": "gpt-5.4-nano",
+    "reasoning_effort": "none",
+    "max_output_tokens": 700,
+    "timeout_seconds": 60,
+    "daily_limit": 15,
+    "monthly_limit": 500,
+    "monthly_budget_usd": 3.0,
+    "input_usd_per_million": 0.20,
+    "output_usd_per_million": 1.25
+  },
+  "profiles": [
+    {
+      "id": "radio_space_engineering",
+      "label": "電磁波計測・可視化・宇宙電波工学",
+      "required_keyword_groups": [["electromagnetic field measurement", "electromagnetic field visualization", "near-field measurement", "near-field scanning", "electromagnetic interference", "emi source localization", "noise source localization", "satellite instrumentation", "onboard instrument", "small satellite", "cubesat", "satellite communication", "ground station", "space plasma", "plasma wave", "magnetosphere", "magnetometer", "radiation transport", "radiation simulation", "dosimetry", "radiation sterilization", "capacitive sensing", "dielectric sensing", "liquid level sensor", "電磁波計測", "電磁波可視化", "電磁妨害", "放射源可視化", "衛星搭載", "小型衛星", "宇宙プラズマ", "プラズマ波動", "磁気圏", "放射線シミュレーション", "静電容量", "誘電率", "液体センサ"]],
+      "openalex_queries": ["electromagnetic field measurement visualization near field", "electromagnetic interference source localization correlation measurement", "small satellite onboard electromagnetic instrument magnetometer", "space plasma wave magnetosphere machine learning", "radiation transport simulation DNA damage sterilization", "capacitive liquid sensing dielectric container"],
+      "arxiv_categories": ["eess.SP", "eess.SY", "physics.space-ph", "physics.plasm-ph", "physics.ins-det", "physics.comp-ph", "cs.LG"],
+      "arxiv_queries": ["electromagnetic field measurement|electromagnetic field visualization|near-field measurement|near-field scanning", "electromagnetic interference|EMI source localization|noise source localization|correlation measurement", "small satellite|CubeSat|satellite instrumentation|onboard instrument|ground station", "space plasma|plasma wave|magnetosphere|Mercury magnetosphere|magnetometer", "radiation transport|radiation simulation|DNA damage|radiation sterilization", "capacitive sensing|dielectric sensing|liquid level sensor"],
+      "jstage_queries": ["電磁波可視化", "電磁波計測", "電磁妨害", "衛星搭載", "宇宙プラズマ", "放射線シミュレーション"],
+      "category_keywords": ["electrical engineering", "signal processing", "space physics", "plasma physics", "instrumentation", "computational physics", "eess.sp", "eess.sy", "physics.space-ph", "physics.plasm-ph", "physics.ins-det", "physics.comp-ph"],
+      "strong_keywords": ["capacitive sensing", "electromagnetic field measurement", "electromagnetic field visualization", "electromagnetic wave visualization", "near-field measurement", "near-field scanning", "electromagnetic interference", "emi source localization", "noise source localization", "electric field probe", "magnetic field probe", "space plasma", "plasma wave", "satellite instrumentation", "onboard instrument", "small satellite", "cubesat", "satellite communication", "ground station", "radiation transport", "radiation simulation", "電磁波計測", "電磁波可視化", "電磁妨害", "放射源可視化", "衛星搭載", "小型衛星", "宇宙プラズマ", "プラズマ波動", "磁気圏", "放射線シミュレーション", "静電容量", "誘電率", "液体センサ"],
+      "related_keywords": ["augmented reality", "mixed reality", "head-mounted display", "field mapping", "correlation measurement", "capacitive sensing", "dielectric sensing", "liquid level sensor", "magnetometer", "search coil magnetometer", "asic", "instrument miniaturization", "mercury magnetosphere", "magnetospheric plasma", "particle trajectory", "dosimetry", "dna damage", "radiation sterilization", "相関計測", "近傍界", "遠方界", "磁力計", "磁界センサ", "電界センサ", "電磁界シミュレーション", "画像処理", "機械学習"],
+      "industry_keywords": ["prototype", "hardware", "embedded system", "measurement system", "sensor", "instrument", "simulation", "machine learning", "deep learning", "試作", "計測システム", "センサ", "シミュレーション"],
+      "exclude_keywords": []
+    },
+    {
+      "id": "diamond_power_electronics",
+      "label": "ダイヤモンド半導体・パワーデバイス",
+      "required_title_keywords": ["diamond", "ダイヤモンド"],
+      "required_title_keyword_groups": [["mosfet", "field-effect transistor", "transistor", "diode", "rectifier", "schottky", "power device", "power-device", "cvd", "epitaxy", "epitaxial", "wafer", "doping", "contact", "トランジスタ", "ダイオード", "整流器", "ショットキー", "パワーデバイス", "エピタキシャル", "ウエハ", "ウェハ", "ドーピング", "オーミック", "接触抵抗"]],
+      "required_keyword_groups": [["mosfet", "field-effect transistor", "transistor", "diode", "rectifier", "schottky", "power device", "cvd", "epitaxy", "epitaxial", "wafer", "doping", "ohmic contact", "contact resistance", "on-resistance", "breakdown voltage", "トランジスタ", "ダイオード", "整流器", "ショットキー", "パワーデバイス", "エピタキシャル", "ウエハ", "ウェハ", "ドーピング", "オーミック", "接触抵抗", "オン抵抗", "耐圧"]],
+      "openalex_queries": ["diamond semiconductor vertical MOSFET power device", "diamond JBS diode Schottky barrier low on-resistance", "microwave plasma CVD diamond epitaxy doping", "large area heteroepitaxial diamond wafer substrate", "diamond MOS interface ohmic contact ALD"],
+      "arxiv_categories": ["cond-mat.mtrl-sci", "cond-mat.mes-hall", "physics.app-ph"],
+      "arxiv_queries": ["diamond semiconductor|diamond power device|diamond MOSFET|vertical diamond MOSFET", "diamond JBS diode|junction barrier Schottky|diamond Schottky barrier diode|diamond diode", "CVD diamond|microwave plasma CVD|MPCVD|diamond epitaxy", "diamond wafer|heteroepitaxial diamond|homoepitaxial diamond|lateral growth", "diamond MOS interface|diamond ohmic contact|diamond surface termination"],
+      "jstage_queries": ["ダイヤモンドMOSFET", "ダイヤモンドダイオード", "ダイヤモンド半導体", "CVDダイヤモンド", "ダイヤモンドウエハ"],
+      "category_keywords": ["materials science", "condensed matter physics", "electronic materials", "electronic devices", "applied physics", "cond-mat.mtrl-sci", "cond-mat.mes-hall", "physics.app-ph"],
+      "strong_keywords": ["diamond", "diamond semiconductor", "diamond semiconductors", "diamond power device", "diamond mosfet", "vertical diamond mosfet", "diamond field-effect transistor", "diamond transistor", "trench mosfet", "diamond schottky barrier diode", "diamond jbs diode", "junction barrier schottky", "diamond diode", "diamond rectifier", "metal oxide semiconductor barrier schottky", "mos barrier schottky", "cvd diamond", "microwave plasma cvd", "mpcvd", "homoepitaxial diamond", "heteroepitaxial diamond", "diamond wafer", "diamond epitaxy", "ダイヤモンド半導体", "ダイヤモンドMOSFET", "縦型ダイヤモンドMOSFET", "ダイヤモンドJBSダイオード", "ショットキーバリアダイオード", "CVDダイヤモンド", "マイクロ波プラズマCVD", "ダイヤモンドウエハ", "ダイヤモンドウェハ"],
+      "related_keywords": ["lateral growth", "step-flow growth", "delta doping", "boron doping", "phosphorus doping", "p-type diamond", "n-type diamond", "surface termination", "hydrogen termination", "oxygen termination", "ohmic contact", "contact resistance", "mos interface", "al2o3 dielectric", "atomic layer deposition", "double patterning", "breakdown voltage", "on-resistance", "carrier mobility", "high-current device", "large-area diamond", "trench", "rectifier", "ラテラル成長", "不純物ドーピング", "p型ダイヤモンド", "n型ダイヤモンド", "表面終端", "MOS界面", "酸化膜", "原子層堆積", "ダブルパターニング", "耐圧", "オン抵抗", "キャリア移動度"],
+      "industry_keywords": ["power electronics", "high voltage", "low loss", "energy efficiency", "wafer-scale", "device fabrication", "process integration", "reliability", "high output", "led", "electron source"],
+      "exclude_keywords": []
+    },
+    {
+      "id": "diamond_quantum_interfaces",
+      "label": "ダイヤモンド量子センサ・表面界面解析",
+      "required_title_keywords": ["diamond", "nanodiamond", "nitrogen-vacancy", "nv center", "nv centre", "ダイヤモンド", "ナノダイヤモンド", "NVセンタ", "NV中心", "窒素空孔"],
+      "required_title_keyword_groups": [["quantum", "qubit", "spin", "sensor", "surface", "interface", "carrier transport", "photocatalyst", "co2 reduction", "molecular dynamics", "electronic structure", "nv center", "nv centre", "nitrogen-vacancy", "量子", "量子ビット", "スピン", "センサ", "表面", "界面", "キャリア輸送", "分子動力学", "電子状態"]],
+      "required_keyword_groups": [["quantum", "qubit", "spin", "sensor", "surface", "interface", "carrier transport", "photocatalyst", "co2 reduction", "molecular dynamics", "electronic structure", "量子", "量子ビット", "スピン", "センサ", "表面", "界面", "キャリア輸送", "分子動力学", "電子状態"]],
+      "openalex_queries": ["diamond NV center quantum sensor nanodiamond", "diamond qubit array quantum information sensing", "diamond surface reaction molecular dynamics simulation", "diamond metal oxide interface electronic states carrier transport", "diamond photocatalyst CO2 reduction"],
+      "arxiv_categories": ["quant-ph", "cond-mat.mtrl-sci", "cond-mat.mes-hall", "physics.app-ph", "physics.chem-ph", "q-bio.BM"],
+      "arxiv_queries": ["diamond NV center|nitrogen-vacancy center|NV centre|diamond quantum sensor", "nanodiamond sensor|diamond qubit|diamond quantum device|qubit array", "diamond surface reaction|diamond surface potential|diamond molecular dynamics", "diamond interface electronic structure|diamond carrier transport|diamond metal interface|diamond oxide interface", "diamond photocatalyst|diamond CO2 reduction"],
+      "jstage_queries": ["ダイヤモンド量子センサ", "NVセンタ", "NV中心", "ナノダイヤモンド", "ダイヤモンド表面", "ダイヤモンド界面"],
+      "category_keywords": ["quantum physics", "quantum information", "materials science", "mesoscopic physics", "applied physics", "chemical physics", "biomolecules", "quant-ph", "cond-mat.mtrl-sci", "cond-mat.mes-hall", "physics.app-ph", "physics.chem-ph", "q-bio.bm"],
+      "strong_keywords": ["diamond", "nanodiamond", "diamond nv center", "nitrogen-vacancy center", "nv centre", "diamond quantum sensor", "nanodiamond sensor", "diamond qubit", "diamond quantum device", "diamond surface reaction", "diamond surface electronic structure", "diamond interface electronic structure", "diamond carrier transport", "diamond metal interface", "diamond oxide interface", "ダイヤモンド量子センサ", "ナノダイヤモンド", "NVセンタ", "NV中心", "ダイヤモンド表面", "ダイヤモンド界面"],
+      "related_keywords": ["quantum sensing", "quantum simulation", "quantum information", "qubit array", "cellular sensing", "intracellular sensing", "biomedical sensing", "spin defect", "color center", "surface potential", "molecular dynamics", "first-principles calculation", "density functional theory", "dft", "electron transport", "interface states", "band alignment", "co2 reduction", "diamond photocatalyst", "量子センシング", "量子情報", "量子シミュレータ", "細胞内計測", "バイオセンシング", "表面反応", "第一原理計算", "密度汎関数理論", "キャリア輸送", "界面準位"],
+      "industry_keywords": ["room temperature", "high sensitivity", "nanosensor", "microchip", "medical application", "bioimaging", "device fabrication", "surface engineering", "simulation"],
+      "exclude_keywords": []
+    }
+  ]
+}

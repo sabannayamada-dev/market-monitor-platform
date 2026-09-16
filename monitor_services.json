@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "services": {
+    "stock-bottom": {
+      "label": "株価底検知モニター",
+      "schedule": "毎日 07:00 Asia/Tokyo",
+      "preflight": ["stock_bottom_preflight.py"],
+      "command": ["stock_bottom_daily.py"],
+      "timeout_seconds": 14400,
+      "state_hint": "STOCK_BOTTOM_STATE_DB"
+    },
+    "patent-materiality": {
+      "label": "特許材料性モニター",
+      "schedule": "毎日 20:00 Asia/Tokyo",
+      "preflight": ["patent_monitor_preflight.py"],
+      "command": ["patent_monitor_daily.py"],
+      "timeout_seconds": 28800,
+      "state_hint": "PATENT_DB_PATH"
+    },
+    "gdelt-news": {
+      "label": "GDELTニュース材料性モニター",
+      "schedule": "2分ごとに起動し、SQLite内の可変周期xで収集を制御",
+      "preflight": ["gdelt_news_preflight.py"],
+      "command": ["gdelt_news_daily.py"],
+      "timeout_seconds": 1800,
+      "state_hint": "GDELT_STATE_DB"
+    },
+    "research-paper": {
+      "label": "最新論文モニター",
+      "schedule": "毎日 10:30 Asia/Tokyo",
+      "preflight": ["research_paper_preflight.py"],
+      "command": ["research_paper_daily.py"],
+      "timeout_seconds": 2700,
+      "state_hint": "PAPER_STATE_DB"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+﻿{
+  "score_weights": {
+    "rd": 0.5,
+    "growth": 0.2,
+    "wage": 0.1,
+    "tenure": 0.1,
+    "location": 0.2
+  },
+  "target_locations": [
+    "金沢",
+    "札幌",
+    "新潟",
+    "関西"
+  ],
+  "min_valid_score_count": 2
+}

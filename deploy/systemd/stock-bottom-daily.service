@@ -1,0 +1,29 @@
+[Unit]
+Description=Daily stock bottom detection and email monitor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python -u monitorctl.py run stock-bottom
+TimeoutStartSec=4h
+StateDirectory=market-monitor
+StateDirectoryMode=0750
+UMask=0027
+Nice=8
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/stock-bottom-monitor /var/log/stock-bottom-monitor /var/lib/market-monitor
+StandardOutput=append:/var/log/stock-bottom-monitor/daily.log
+StandardError=append:/var/log/stock-bottom-monitor/daily-error.log
+
+[Install]
+WantedBy=multi-user.target

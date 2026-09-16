@@ -1,0 +1,24 @@
+[Unit]
+Description=Add yfinance daily path features to stock_analysis CSV
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/stock-daily-path-features
+StateDirectory=stock-daily-path-features
+StateDirectoryMode=0750
+LogsDirectory=stock-daily-path-features
+LogsDirectoryMode=0750
+ExecStartPre=+/usr/bin/install -d -o app -g app -m 0750 /var/lib/stock-daily-path-features/cache /var/lib/stock-daily-path-features/output /var/lib/stock-daily-path-features/input
+ExecStart=/opt/stock-daily-path-features/venv/bin/python /opt/stock-daily-path-features/daily_path_feature_enricher.py --input /var/lib/stock-daily-path-features/input/stock_analysis_input.csv --output /var/lib/stock-daily-path-features/output/stock_analysis_with_daily_path.csv --cache-dir /var/lib/stock-daily-path-features/cache --only-detected --progress-every 50
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/stock-daily-path-features /var/log/stock-daily-path-features
+StandardOutput=append:/var/log/stock-daily-path-features/run.log
+StandardError=append:/var/log/stock-daily-path-features/run.log

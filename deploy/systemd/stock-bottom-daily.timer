@@ -1,0 +1,11 @@
+[Unit]
+Description=Run stock bottom detection every morning at 07:00 JST
+
+[Timer]
+OnCalendar=*-*-* 07:00:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=120
+Unit=stock-bottom-daily.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,141 @@
+{
+  "gemini_threshold": 68.0,
+  "company_percentile_threshold": 95.0,
+  "fuzzy_match_threshold": 0.9,
+  "fuzzy_match_margin": 0.05,
+  "random_reject_audit_rate": 0.05,
+  "monthly_gpt_limit": 500,
+  "daily_gpt_limit": 40,
+  "gpt_model": "gpt-5-nano",
+  "monthly_gemini_limit": 500,
+  "daily_gemini_limit": 10,
+  "gemini_model": "gemini-3.1-flash-lite",
+  "gemini_escalation_threshold": 85.0,
+  "adaptive_gemini_escalation": true,
+  "gemini_target_escalation_rate": 0.10,
+  "adaptive_escalation_min_samples": 30,
+  "adaptive_escalation_window": 300,
+  "adaptive_escalation_max_step": 2.0,
+  "ranked_ai_enabled": true,
+  "ranked_gpt_top_rate": 0.12,
+  "ranked_gpt_audit_rate": 0.005,
+  "ranked_gemini_top_rate": 0.12,
+  "annual_ai_budget_jpy": 6000.0,
+  "ai_budget_call_reserve_jpy": 5.0,
+  "ai_usd_jpy_rate": 160.0,
+  "openai_input_usd_per_million": 0.05,
+  "openai_output_usd_per_million": 0.40,
+  "gemini_input_usd_per_million": 0.25,
+  "gemini_output_usd_per_million": 1.50,
+  "metadata_weight": 0.22,
+  "technology_weight": 0.26,
+  "novelty_weight": 0.25,
+  "materiality_weight": 0.27,
+  "history_lookback": 200,
+  "company_percentile_min_history": 5,
+  "global_percentile_min_history": 30,
+  "request_timeout_seconds": 45,
+  "ops_requests_per_minute": 10,
+  "ops_enrich_details": true,
+  "ops_detail_max_records": 100,
+  "ops_enrich_claims": true,
+  "ops_claims_fulltext_top_rate": 0.02,
+  "ops_enrich_family_legal": false,
+  "ops_enrich_forward_citations": false,
+  "ops_forward_citation_max_records": 100,
+  "ops_company_search_name_limit": 12,
+  "ops_detail_cache_enabled": true,
+  "ops_detail_cache_path": "",
+  "technology_discovery_enabled": true,
+  "technology_discovery_lookback_days": 3,
+  "technology_discovery_max_records_per_query": 10,
+  "technology_discovery_email_limit": 10,
+  "technology_discovery_gpt_top_rate": 0.25,
+  "company_search_time_guard_minutes": 90.0,
+  "postprocess_time_guard_minutes": 90.0,
+  "finalization_reserve_minutes": 20.0,
+  "technology_discovery_queries": [
+    {
+      "name": "次世代半導体",
+      "query": "ta=\"power semiconductor\" or ta=\"silicon carbide semiconductor\" or ta=\"gallium nitride semiconductor\" or ta=\"semiconductor manufacturing\""
+    },
+    {
+      "name": "量子技術",
+      "query": "ta=\"quantum computing\" or ta=\"quantum computer\" or ta=\"quantum communication\" or ta=\"quantum sensor\""
+    },
+    {
+      "name": "全固体電池",
+      "query": "ta=\"all-solid-state battery\" or ta=\"all solid state battery\" or ta=\"solid electrolyte battery\""
+    },
+    {
+      "name": "核融合",
+      "query": "ta=\"nuclear fusion\" or ta=\"fusion reactor\" or ta=\"fusion power\""
+    },
+    {
+      "name": "AI・機械学習",
+      "query": "ta=\"artificial intelligence\" or ta=\"machine learning\" or ta=\"neural network\""
+    },
+    {
+      "name": "先端バイオ医療",
+      "query": "ta=\"gene therapy\" or ta=\"regenerative medicine\" or ta=\"antibody drug\" or ta=\"messenger RNA\""
+    },
+    {
+      "name": "先端ロボット",
+      "query": "ta=\"collaborative robot\" or ta=\"autonomous robot\" or ta=\"surgical robot\""
+    },
+    {
+      "name": "サイバーセキュリティ",
+      "query": "ta=\"cyber security\" or ta=cybersecurity or ta=ransomware"
+    }
+  ],
+  "github_actions_time_guard_minutes": 0.0,
+  "broad_technology_gemini_threshold": 24.0,
+  "broad_materiality_minimum": 18.0,
+  "daily_digest_enabled": true,
+  "urgent_notifications_enabled": true,
+  "urgent_max_digest_share": 0.01,
+  "urgent_min_importance": 98.0,
+  "urgent_min_short_term_market_impact": 95.0,
+  "urgent_min_materiality": 95.0,
+  "urgent_min_company_percentile": 99.0,
+  "urgent_min_learned_upside_probability": 0.0,
+  "target_cpc_prefixes": [
+    "H10D", "H01L", "G06N10", "G06F30", "H04B10", "B60L", "Y02E", "C12N"
+  ],
+  "target_ipc_prefixes": ["H01L", "G06N", "H04B", "B60L", "C12N"],
+  "target_keywords": [
+    "半導体", "量子", "人工知能", "機械学習", "光量子", "全固体電池", "核融合",
+    "バイオ", "ロボット", "サイバーセキュリティ"
+  ],
+  "broad_cpc_prefixes": [
+    "A61B", "A61F", "A61K", "A61L", "A61M", "A61N",
+    "B22", "B23", "B24", "B25J", "B29", "B33Y", "B60", "B64",
+    "C01", "C02", "C04", "C07", "C08", "C09", "C10", "C12", "C21", "C22", "C23", "C25",
+    "F03", "F24", "G01", "G02", "G03F", "G05B", "G06F", "G06N", "G06T", "G06V", "G16H",
+    "H01L", "H01M", "H02", "H03", "H04", "H10", "Y02"
+  ],
+  "broad_ipc_prefixes": [
+    "A61B", "A61F", "A61K", "A61L", "A61M", "A61N",
+    "B22", "B23", "B25J", "B29", "B33Y", "B60", "B64",
+    "C01", "C02", "C04", "C07", "C08", "C09", "C10", "C12", "C21", "C22", "C23", "C25",
+    "F03", "F24", "G01", "G02", "G03F", "G05B", "G06F", "G06N", "G06T", "G06V", "G16H",
+    "H01L", "H01M", "H02", "H03", "H04", "H10", "Y02"
+  ],
+  "broad_keywords": [
+    "医療機器", "診断", "画像診断", "治療", "再生医療", "細胞治療", "遺伝子治療", "ゲノム",
+    "創薬", "抗体", "mRNA", "バイオマーカー", "インプラント", "生体材料", "生分解", "ドラッグデリバリー",
+    "先端材料", "機能性材料", "複合材料", "セラミックス", "高分子", "ナノ材料", "メタマテリアル",
+    "マグネシウム", "チタン", "超電導", "触媒", "分離膜", "炭素繊維",
+    "蓄電池", "リチウムイオン電池", "ナトリウムイオン電池", "燃料電池", "水素", "太陽電池",
+    "ペロブスカイト", "電力変換", "パワー半導体", "再生可能エネルギー", "CO2回収", "CCS",
+    "センサー", "MEMS", "LiDAR", "フォトニクス", "光通信", "5G", "6G", "衛星通信",
+    "自動運転", "電気自動車", "ドローン", "宇宙", "衛星", "ロボティクス", "協働ロボット",
+    "デジタルツイン", "エッジAI", "生成AI", "暗号", "ブロックチェーン", "サイバーセキュリティ",
+    "3Dプリンタ", "積層造形", "スマートファクトリー", "精密加工",
+    "medical device", "biodegradable", "implant", "regenerative medicine", "cell therapy", "gene therapy",
+    "drug discovery", "advanced material", "nanomaterial", "solid-state battery", "fuel cell", "hydrogen",
+    "perovskite", "power semiconductor", "carbon capture", "photonics", "lidar", "autonomous driving",
+    "robotics", "digital twin", "cybersecurity", "additive manufacturing", "quantum computing"
+  ],
+  "excluded_keywords": ["予約システム", "ポイント管理", "広告配信"]
+}

@@ -1,0 +1,31 @@
+[Unit]
+Description=GDELT news materiality monitor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=app
+Group=app
+WorkingDirectory=/opt/patent-news-monitor/app
+EnvironmentFile=/etc/patent-news-monitor.env
+ExecStart=/opt/patent-news-monitor/venv/bin/python -u monitorctl.py run gdelt-news
+TimeoutStartSec=30m
+StateDirectory=market-monitor gdelt-news-monitor
+StateDirectoryMode=0750
+LogsDirectory=gdelt-news-monitor
+LogsDirectoryMode=0750
+UMask=0027
+Nice=8
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gdelt-news-monitor /var/log/gdelt-news-monitor /var/lib/market-monitor
+StandardOutput=append:/var/log/gdelt-news-monitor/service.log
+StandardError=append:/var/log/gdelt-news-monitor/service-error.log
+
+[Install]
+WantedBy=multi-user.target
