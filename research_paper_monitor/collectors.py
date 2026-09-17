@@ -51,7 +51,7 @@ def _get(url: str, timeout: int, user_agent: str, retries: int = 2) -> bytes:
                 return response.read()
         except urllib.error.HTTPError as exc:
             last_error = exc
-            if exc.code in {403, 429}:
+            if exc.code in {403, 406, 429}:
                 retry_after = _retry_after_seconds(exc.headers.get("Retry-After", "") if exc.headers else "")
                 suffix = f"; Retry-After={retry_after}s" if retry_after is not None else ""
                 raise RateLimited(exc.code, f"HTTP {exc.code}{suffix}", retry_after) from exc

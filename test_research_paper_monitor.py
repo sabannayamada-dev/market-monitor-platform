@@ -4,11 +4,12 @@ import json
 import os
 import tempfile
 import unittest
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from research_paper_monitor.collectors import RateLimited, collect_arxiv, parse_arxiv_feed, parse_jstage_feed, parse_openalex_work, reconstruct_abstract
+from research_paper_monitor.collectors import RateLimited, _get, collect_arxiv, parse_arxiv_feed, parse_jstage_feed, parse_openalex_work, reconstruct_abstract
 from research_paper_monitor.database import PaperDatabase, normalize_arxiv_id, normalize_doi
 from research_paper_monitor.models import PaperRecord
 from research_paper_monitor.notifications import build_digest
@@ -39,6 +40,21 @@ def sample_record(source: str = "openalex", source_id: str = "W1", doi: str = "1
 
 
 class CollectorTests(unittest.TestCase):
+    def test_http_406_is_a_short_rate_limit_error(self) -> None:
+        error = urllib.error.HTTPError(
+            "https://export.arxiv.org/api/query?very-long-query=secret",
+            406,
+            "Not Acceptable",
+            {},
+            None,
+        )
+        with patch("research_paper_monitor.collectors.urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(RateLimited) as raised:
+                _get("https://export.arxiv.org/api/query?very-long-query=secret", 10, "test-agent")
+        self.assertEqual(406, raised.exception.status_code)
+        self.assertEqual("HTTP 406", str(raised.exception))
+        self.assertNotIn("https://", str(raised.exception))
+
     def test_reconstruct_openalex_abstract(self) -> None:
         self.assertEqual("A compact antenna", reconstruct_abstract({"antenna": [2], "A": [0], "compact": [1]}))
 
@@ -218,7 +234,7 @@ class ServiceTests(unittest.TestCase):
             }}
         }
         profiles = [{"arxiv_categories": ["quant-ph"], "arxiv_queries": ["diamond sensor"]}]
-        limited = RateLimited(429, "HTTP 429", 3600)
+        limited = RateLimited(406, "HTTP 406")
         with patch("research_paper_monitor.collectors._get", side_effect=[limited, b'<feed xmlns="http://www.w3.org/2005/Atom"/>']) as get, patch(
             "research_paper_monitor.collectors.time.sleep"
         ) as sleep:
@@ -318,6 +334,29 @@ class ServiceTests(unittest.TestCase):
             self.assertEqual(1, result["inserted"])
             self.assertEqual(1, result["http_429"])
             self.assertEqual(2, result["sources_succeeded"])
+
+    def test_http_406_is_counted_and_other_sources_continue(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            environment = {
+                "PAPER_CONFIG_PATH": str(ROOT / "research_paper_config.json"),
+                "PAPER_STATE_DB": str(Path(temporary) / "papers.sqlite3"),
+                "PAPER_OPERATION_STAGE": "1",
+            }
+
+            def arxiv(*_args):
+                raise RateLimited(406, "HTTP 406")
+
+            with patch.dict(os.environ, environment, clear=False):
+                result = run_daily_service(
+                    now=datetime(2026, 9, 5, tzinfo=timezone.utc),
+                    collectors={"openalex": lambda *_args: [sample_record()], "arxiv": arxiv, "jstage": lambda *_args: []},
+                )
+            self.assertEqual("baseline_completed", result["status"])
+            self.assertEqual(1, result["http_406"])
+            self.assertEqual(0, result["http_429"])
+            self.assertEqual(2, result["sources_succeeded"])
+            self.assertTrue(any(error.startswith("arxiv: HTTP 406;") for error in result["errors"]))
+            self.assertFalse(any("https://" in error for error in result["errors"]))
 
 
 if __name__ == "__main__":

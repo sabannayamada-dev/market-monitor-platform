@@ -43,7 +43,7 @@ def run_daily_service(
         "inserted": 0, "updated": 0, "duplicates": 0, "scored": 0,
         "candidates": 0, "ai_sent": 0, "ai_completed": 0, "ai_failed": 0,
         "ai_budget_skipped": 0, "emailed": 0,
-        "http_403": 0, "http_429": 0, "cooldown_skipped": 0,
+        "http_403": 0, "http_406": 0, "http_429": 0, "cooldown_skipped": 0,
     }
     errors: list[str] = []
     new_ids: list[str] = []
@@ -90,7 +90,7 @@ def run_daily_service(
                 on_success(database, source, current)
             except RateLimited as exc:
                 store_records(exc.partial_records)
-                field = "http_403" if exc.status_code == 403 else "http_429"
+                field = f"http_{exc.status_code}" if exc.status_code in {403, 406, 429} else "http_429"
                 stats[field] += 1
                 state = on_rate_limited(
                     database, source, current, exc.retry_after_seconds,

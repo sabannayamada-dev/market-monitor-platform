@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS collection_runs (
     ai_failed INTEGER NOT NULL DEFAULT 0,
     emailed INTEGER NOT NULL DEFAULT 0,
     http_403 INTEGER NOT NULL DEFAULT 0,
+    http_406 INTEGER NOT NULL DEFAULT 0,
     http_429 INTEGER NOT NULL DEFAULT 0,
     cooldown_skipped INTEGER NOT NULL DEFAULT 0,
     error_json TEXT NOT NULL DEFAULT '[]'
@@ -170,7 +171,7 @@ class PaperDatabase:
         with self.connection() as connection:
             connection.executescript(SCHEMA)
             columns = {row[1] for row in connection.execute("PRAGMA table_info(collection_runs)")}
-            for name in ("http_403", "http_429", "cooldown_skipped"):
+            for name in ("http_403", "http_406", "http_429", "cooldown_skipped"):
                 if name not in columns:
                     connection.execute(f"ALTER TABLE collection_runs ADD COLUMN {name} INTEGER NOT NULL DEFAULT 0")
 
@@ -348,7 +349,7 @@ class PaperDatabase:
             )
 
     def finish_run(self, run_id: str, status: str, stats: dict[str, Any], errors: list[str]) -> None:
-        fields = ("fetched", "inserted", "updated", "duplicates", "scored", "candidates", "ai_sent", "ai_completed", "ai_failed", "emailed", "http_403", "http_429", "cooldown_skipped")
+        fields = ("fetched", "inserted", "updated", "duplicates", "scored", "candidates", "ai_sent", "ai_completed", "ai_failed", "emailed", "http_403", "http_406", "http_429", "cooldown_skipped")
         with self.connection() as connection:
             connection.execute(
                 f"UPDATE collection_runs SET completed_at=?,status=?,{','.join(f'{x}=?' for x in fields)},error_json=? WHERE run_id=?",
