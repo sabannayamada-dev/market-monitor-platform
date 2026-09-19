@@ -18,14 +18,16 @@ from gdelt_monitor.adaptive import (
     detect_stability, load_state, mark_stability_alert_sent, on_429,
     on_run_without_429, stability_alert_parameters,
 )
-from gdelt_monitor.ai import review_emergency_alerts, run_emergency_ai_self_test
+from gdelt_monitor.ai import (
+    review_emergency_alerts, review_emergency_alerts_with_jev, run_emergency_ai_self_test,
+)
 from gdelt_monitor.collector import NonJsonResponse, QueryTask, RateLimited, build_tasks, fetch_once
 from gdelt_monitor.database import NewsDatabase
 from gdelt_monitor.emergency import classify_title, ready_alerts, run_emergency_scout
 from gdelt_monitor.global_news import rank_toc_records, score_world_headline, select_daily_world_news
 from gdelt_monitor.notifications import build_digest, build_emergency_alert, health_label
 from gdelt_monitor.ngram_collector import DocumentMatcher, NgramCollection, NgramFile
-from gdelt_monitor.service import run_daily_service
+from gdelt_monitor.service import _merge_emergency_approvals, run_daily_service
 from gdelt_news_daily import main as gdelt_cli_main
 
 
@@ -959,6 +961,85 @@ class GdeltMonitorTests(unittest.TestCase):
                 )
             self.assertEqual([], held)
             self.assertIn("OPENAI_API_KEY", held_errors[0])
+
+    def test_emergency_jev_review_is_independent_cached_and_probabilistic(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            database = NewsDatabase(Path(temporary) / "news.sqlite3")
+            now = datetime(2026, 8, 16, 14, tzinfo=timezone.utc)
+            alert = {
+                "alert_id": "a1",
+                "event_key": "major_exchange:global",
+                "event_type": "major_exchange",
+                "event_state": "trading_halted",
+                "entity": "major exchange halt",
+                "confirmation": "trusted_source",
+                "evidence": [{
+                    "title": "NYSE halts all trading",
+                    "title_key": "t1",
+                    "domain": "reuters.com",
+                    "url": "https://reuters.com/a",
+                    "seen_date": "20260816T140000Z",
+                }],
+            }
+            response = {
+                "model": "jev-latest",
+                "answers": {
+                    "event_confirmed": {"type": "noul", "noul": 0.98},
+                    "same_event": {"type": "noul", "noul": 0.99},
+                    "non_speculation": {"type": "noul", "noul": 0.97},
+                    "market_impact": {"type": "noul", "noul": 0.91},
+                    "urgent": {"type": "noul", "noul": 0.89},
+                    "event_category": {
+                        "type": "choice", "choice": "major_exchange", "confidence": 0.94,
+                        "probabilities": {"major_exchange": 0.97, "other": 0.03},
+                    },
+                },
+                "usage": {"input_tokens": 500, "output_tokens": 40},
+            }
+            settings = {"jev_review": {"enabled": True, "minimum_probability": 0.75}}
+            with patch.dict(os.environ, {"TYPESAFE_API_KEY": "test-key"}), patch(
+                "gdelt_monitor.ai._post_jev_json", return_value=response
+            ) as post:
+                approved, stats, errors = review_emergency_alerts_with_jev(
+                    database, [alert], settings, now
+                )
+                cached, cached_stats, cached_errors = review_emergency_alerts_with_jev(
+                    database, [alert], settings, now + timedelta(minutes=1)
+                )
+            self.assertEqual(1, len(approved))
+            self.assertEqual(1, stats["sent"])
+            self.assertEqual([], errors)
+            self.assertEqual(1, len(cached))
+            self.assertEqual(1, cached_stats["cached"])
+            self.assertEqual([], cached_errors)
+            self.assertEqual(1, post.call_count)
+            sent_payload = post.call_args.args[0]
+            self.assertEqual("jev-latest", sent_payload["model"])
+            self.assertEqual("noul", sent_payload["questions"]["urgent"]["type"])
+
+            with patch.dict(os.environ, {}, clear=True):
+                inactive, inactive_stats, inactive_errors = review_emergency_alerts_with_jev(
+                    database, [{**alert, "alert_id": "a2"}], settings, now
+                )
+            self.assertEqual([], inactive)
+            self.assertEqual(0, inactive_stats["sent"])
+            self.assertEqual([], inactive_errors)
+
+    def test_emergency_parallel_approval_uses_union_without_duplicate_email(self) -> None:
+        base = {"alert_id": "a1", "event_key": "major_exchange:global", "entity": "exchange"}
+        merged = _merge_emergency_approvals(
+            [{**base, "ai_review": {"market_impact": 96}}],
+            [{**base, "jev_review": {"market_impact_probability": 0.92}}],
+        )
+        self.assertEqual(1, len(merged))
+        self.assertEqual(["openai", "jev"], merged[0]["approval_sources"])
+        self.assertIn("ai_review", merged[0])
+        self.assertIn("jev_review", merged[0])
+
+        jev_only = _merge_emergency_approvals(
+            [], [{**base, "jev_review": {"urgency_probability": 0.93}}]
+        )
+        self.assertEqual(["jev"], jev_only[0]["approval_sources"])
 
     def test_emergency_ai_self_test_requires_negative_and_positive_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

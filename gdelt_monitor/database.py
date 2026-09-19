@@ -199,6 +199,31 @@ CREATE TABLE IF NOT EXISTS emergency_ai_reviews (
 CREATE INDEX IF NOT EXISTS idx_emergency_ai_reviews_at
     ON emergency_ai_reviews(reviewed_at DESC);
 
+CREATE TABLE IF NOT EXISTS emergency_jev_reviews (
+    review_id TEXT PRIMARY KEY,
+    evidence_key TEXT NOT NULL UNIQUE,
+    event_key TEXT NOT NULL,
+    event_state TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'typesafe',
+    model TEXT NOT NULL,
+    status TEXT NOT NULL,
+    event_confirmed_probability REAL NOT NULL DEFAULT 0,
+    same_event_probability REAL NOT NULL DEFAULT 0,
+    non_speculation_probability REAL NOT NULL DEFAULT 0,
+    market_impact_probability REAL NOT NULL DEFAULT 0,
+    urgency_probability REAL NOT NULL DEFAULT 0,
+    event_category TEXT NOT NULL DEFAULT '',
+    category_confidence REAL NOT NULL DEFAULT 0,
+    approved INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_cost_usd REAL NOT NULL DEFAULT 0,
+    raw_json TEXT NOT NULL DEFAULT '{}',
+    reviewed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_emergency_jev_reviews_at
+    ON emergency_jev_reviews(reviewed_at DESC);
+
 CREATE TABLE IF NOT EXISTS emergency_scout_runs (
     run_id TEXT PRIMARY KEY,
     started_at TEXT NOT NULL,
@@ -494,6 +519,51 @@ class NewsDatabase:
                     json.dumps(review.get("affected_assets", []), ensure_ascii=False),
                     str(review.get("japanese_summary", "")), str(review.get("reason", "")),
                     int(review.get("input_tokens", 0)), int(review.get("output_tokens", 0)),
+                    float(review.get("estimated_cost_usd", 0)),
+                    json.dumps(review.get("raw", {}), ensure_ascii=False), review["reviewed_at"],
+                ),
+            )
+
+    def emergency_jev_review(self, evidence_key: str) -> dict[str, Any] | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM emergency_jev_reviews WHERE evidence_key=?", (evidence_key,)
+            ).fetchone()
+        return dict(row) if row is not None else None
+
+    def emergency_jev_usage_since(self, since: str) -> dict[str, float]:
+        with self.connection() as connection:
+            row = connection.execute(
+                """SELECT COUNT(*) AS requests,
+                          COALESCE(SUM(estimated_cost_usd),0) AS cost_usd
+                   FROM emergency_jev_reviews
+                   WHERE provider='typesafe' AND reviewed_at>=?""",
+                (since,),
+            ).fetchone()
+        return {"requests": int(row["requests"]), "cost_usd": float(row["cost_usd"])}
+
+    def record_emergency_jev_review(self, review: dict[str, Any]) -> None:
+        with self.connection() as connection:
+            connection.execute(
+                """INSERT OR REPLACE INTO emergency_jev_reviews(
+                       review_id,evidence_key,event_key,event_state,provider,model,status,
+                       event_confirmed_probability,same_event_probability,
+                       non_speculation_probability,market_impact_probability,
+                       urgency_probability,event_category,category_confidence,approved,
+                       input_tokens,output_tokens,estimated_cost_usd,raw_json,reviewed_at
+                   ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    review["review_id"], review["evidence_key"], review["event_key"],
+                    review["event_state"], review.get("provider", "typesafe"), review["model"],
+                    review["status"], float(review.get("event_confirmed_probability", 0)),
+                    float(review.get("same_event_probability", 0)),
+                    float(review.get("non_speculation_probability", 0)),
+                    float(review.get("market_impact_probability", 0)),
+                    float(review.get("urgency_probability", 0)),
+                    str(review.get("event_category", "")),
+                    float(review.get("category_confidence", 0)),
+                    int(bool(review.get("approved"))), int(review.get("input_tokens", 0)),
+                    int(review.get("output_tokens", 0)),
                     float(review.get("estimated_cost_usd", 0)),
                     json.dumps(review.get("raw", {}), ensure_ascii=False), review["reviewed_at"],
                 ),

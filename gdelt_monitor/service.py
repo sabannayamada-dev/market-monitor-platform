@@ -3,11 +3,15 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from .ai import review_candidates, review_emergency_alerts, run_emergency_ai_self_test
+from .ai import (
+    review_candidates, review_emergency_alerts, review_emergency_alerts_with_jev,
+    run_emergency_ai_self_test,
+)
 from .adaptive import (
     detect_stability, load_state, lookback_minutes, mark_stability_alert_sent,
     on_403, on_429, on_run_without_429, save_state, stability_alert_parameters,
@@ -28,6 +32,26 @@ from .ngram_collector import NgramCollection, collect_web_ngrams
 
 
 JST = ZoneInfo("Asia/Tokyo")
+
+
+def _merge_emergency_approvals(
+    gpt_approved: list[dict[str, Any]], jev_approved: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    approved_by_id: dict[str, dict[str, Any]] = {}
+    for alert in gpt_approved:
+        merged = dict(alert)
+        merged["approval_sources"] = ["openai"]
+        approved_by_id[str(alert.get("alert_id") or alert["event_key"])] = merged
+    for alert in jev_approved:
+        identity = str(alert.get("alert_id") or alert["event_key"])
+        if identity in approved_by_id:
+            approved_by_id[identity]["jev_review"] = alert.get("jev_review", {})
+            approved_by_id[identity]["approval_sources"].append("jev")
+        else:
+            merged = dict(alert)
+            merged["approval_sources"] = ["jev"]
+            approved_by_id[identity] = merged
+    return list(approved_by_id.values())
 
 
 def _emergency_snapshot(
@@ -51,6 +75,12 @@ def _emergency_snapshot(
         "emergency_ai_cached": ai_stats.get("cached", 0),
         "emergency_ai_budget_skipped": ai_stats.get("budget_skipped", 0),
         "emergency_ai_configured": bool(os.getenv("OPENAI_API_KEY", "").strip()),
+        "emergency_jev_sent": ai_stats.get("jev_sent", 0),
+        "emergency_jev_approved": ai_stats.get("jev_approved", 0),
+        "emergency_jev_cached": ai_stats.get("jev_cached", 0),
+        "emergency_jev_budget_skipped": ai_stats.get("jev_budget_skipped", 0),
+        "emergency_jev_configured": bool(os.getenv("TYPESAFE_API_KEY", "").strip()),
+        "emergency_parallel_approved": ai_stats.get("parallel_approved", 0),
         "emergency_next_scan_at": result.next_scan_at,
         "emergency_errors": [*result.errors, *send_errors],
     }
@@ -88,6 +118,11 @@ def run_daily_service(
         "true" if os.getenv("OPENAI_API_KEY", "").strip() else "false",
         datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
+    database.set_state(
+        "emergency_jev_key_configured",
+        "true" if os.getenv("TYPESAFE_API_KEY", "").strip() else "false",
+        datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    )
     collector_config = config.get("collector", {})
     adaptive_config = config.get("adaptive_control", {})
     end = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -112,14 +147,47 @@ def run_daily_service(
     emergency_send_errors: list[str] = []
     emergency_ai_stats: dict[str, int] = {}
     if stage >= 3:
-        approved_alerts, emergency_ai_stats, emergency_ai_errors = review_emergency_alerts(
-            database,
-            emergency_result.ready_alerts,
-            config.get("emergency_monitor", {}),
-            end,
-        )
+        emergency_settings = config.get("emergency_monitor", {})
+        with ThreadPoolExecutor(max_workers=2, thread_name_prefix="emergency-review") as pool:
+            gpt_future = pool.submit(
+                review_emergency_alerts,
+                database,
+                emergency_result.ready_alerts,
+                emergency_settings,
+                end,
+            )
+            jev_future = pool.submit(
+                review_emergency_alerts_with_jev,
+                database,
+                emergency_result.ready_alerts,
+                emergency_settings,
+                end,
+            )
+            try:
+                gpt_approved, gpt_stats, gpt_errors = gpt_future.result()
+            except Exception as exc:
+                gpt_approved = []
+                gpt_stats = {"sent": 0, "approved": 0, "cached": 0, "budget_skipped": 0}
+                gpt_errors = [f"OpenAI review worker: {type(exc).__name__}: {exc}"]
+            try:
+                jev_approved, jev_stats, jev_errors = jev_future.result()
+            except Exception as exc:
+                jev_approved = []
+                jev_stats = {"sent": 0, "approved": 0, "cached": 0, "budget_skipped": 0}
+                jev_errors = [f"Jev review worker: {type(exc).__name__}: {exc}"]
+
+        approved_alerts = _merge_emergency_approvals(gpt_approved, jev_approved)
         emergency_result.ready_alerts = approved_alerts
-        emergency_result.errors.extend(emergency_ai_errors)
+        emergency_ai_stats = {
+            **gpt_stats,
+            "gpt_approved": gpt_stats.get("approved", 0),
+            "jev_sent": jev_stats.get("sent", 0),
+            "jev_approved": jev_stats.get("approved", 0),
+            "jev_cached": jev_stats.get("cached", 0),
+            "jev_budget_skipped": jev_stats.get("budget_skipped", 0),
+            "parallel_approved": len(approved_alerts),
+        }
+        emergency_result.errors.extend([*gpt_errors, *jev_errors])
     if stage >= 4:
         for alert in emergency_result.ready_alerts:
             try:

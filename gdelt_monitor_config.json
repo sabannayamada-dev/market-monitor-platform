@@ -47,6 +47,20 @@
       "input_usd_per_million": 0.05,
       "output_usd_per_million": 0.40
     },
+    "jev_review": {
+      "enabled": true,
+      "model": "jev-latest",
+      "minimum_probability": 0.75,
+      "request_timeout_seconds": 15,
+      "max_retries": 2,
+      "initial_backoff_seconds": 1.0,
+      "max_backoff_seconds": 10.0,
+      "daily_request_limit": 500,
+      "monthly_request_limit": 30000,
+      "monthly_budget_usd": 1.0,
+      "input_usd_per_million": 0.042,
+      "output_usd_per_million": 0.0
+    },
     "trusted_domains": [
       "reuters.com",
       "apnews.com",

@@ -229,6 +229,9 @@ def build_emergency_alert(alert: dict[str, Any]) -> tuple[str, str]:
         else "独立した複数媒体で確認"
     )
     ai_review = alert.get("ai_review") or {}
+    jev_review = alert.get("jev_review") or {}
+    approval_sources = alert.get("approval_sources") or (["openai"] if ai_review else [])
+    source_labels = {"openai": "従来GPT", "jev": "Jev"}
     subject = f"[GDELT超重要速報] {entity}: {state_label}"
     lines = [
         "市場監視システムが超重要アクシデント候補を検出しました。",
@@ -237,8 +240,8 @@ def build_emergency_alert(alert: dict[str, Any]) -> tuple[str, str]:
         f"対象: {entity}",
         f"状態: {state_label}",
         f"確認方法: {confirmation}",
+        f"速報承認: {', '.join(source_labels.get(item, str(item)) for item in approval_sources) or '―'}",
         "",
-        "根拠記事:",
     ]
     lines.extend(
         [
@@ -249,6 +252,18 @@ def build_emergency_alert(alert: dict[str, Any]) -> tuple[str, str]:
             "",
         ]
     )
+    if jev_review:
+        lines.extend(
+            [
+                f"Jev発生確認確率: {float(jev_review.get('event_confirmed_probability', 0)):.1%}",
+                f"Jev同一事象確率: {float(jev_review.get('same_event_probability', 0)):.1%}",
+                f"Jev非推測確率: {float(jev_review.get('non_speculation_probability', 0)):.1%}",
+                f"Jev市場影響確率: {float(jev_review.get('market_impact_probability', 0)):.1%}",
+                f"Jev緊急性確率: {float(jev_review.get('urgency_probability', 0)):.1%}",
+                "",
+            ]
+        )
+    lines.append("根拠記事:")
     for index, item in enumerate(evidence, 1):
         original_title = item.get("title") or "タイトル不明"
         translated_title = translated_titles.get(original_title, original_title)

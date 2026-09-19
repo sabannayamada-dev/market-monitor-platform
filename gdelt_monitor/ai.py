@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from typing import Any
@@ -120,6 +122,7 @@ def _store_review(database: NewsDatabase, article_id: str, provider: str, model:
 
 
 EMERGENCY_REVIEW_VERSION = "v2-score-100"
+JEV_EMERGENCY_REVIEW_VERSION = "v1-five-gates"
 EMERGENCY_CATEGORIES = (
     "nuclear_weapon_event", "nuclear_facility_attack", "head_of_state", "coup",
     "ceasefire", "major_transport_hub", "financial_sanctions",
@@ -192,13 +195,7 @@ def review_emergency_alerts(
     approved: list[dict[str, Any]] = []
 
     for alert in alerts:
-        evidence_parts = sorted(
-            str(item.get("title_key") or item.get("url") or item.get("title") or "")
-            for item in alert.get("evidence", [])
-        )
-        evidence_key = stable_id(
-            EMERGENCY_REVIEW_VERSION, alert["event_key"], alert["event_state"], *evidence_parts
-        )
+        evidence_key = emergency_evidence_key(alert)
         existing = database.emergency_ai_review(evidence_key)
         if existing is not None and existing.get("status") == "completed":
             stats["cached"] += 1
@@ -321,6 +318,250 @@ def _validated_emergency_review(review: dict[str, Any], expected_category: str) 
         category = expected_category if expected_category in EMERGENCY_CATEGORIES else "other"
     validated["event_category"] = category
     return validated
+
+
+def emergency_evidence_key(alert: dict[str, Any]) -> str:
+    evidence_parts = sorted(
+        str(item.get("title_key") or item.get("url") or item.get("title") or "")
+        for item in alert.get("evidence", [])
+    )
+    return stable_id(
+        EMERGENCY_REVIEW_VERSION, alert["event_key"], alert["event_state"], *evidence_parts
+    )
+
+
+def _jev_questions() -> dict[str, Any]:
+    return {
+        "event_confirmed": {
+            "type": "noul",
+            "instructions": (
+                "Do the supplied headlines report that the event has already happened or is formally "
+                "in effect? Judge only the supplied state."
+            ),
+            "criteria": {
+                "true": "A completed or formally effective event is explicitly reported.",
+                "false": "Only a warning, threat, plan, proposal, exercise, discussion, or ambiguity is reported.",
+            },
+        },
+        "same_event": {
+            "type": "noul",
+            "instructions": "Do all supplied headlines describe the same underlying event and state?",
+            "criteria": {
+                "true": "They describe one coherent event; a single headline is internally coherent.",
+                "false": "They mix different incidents, states, places, or unrelated references.",
+            },
+        },
+        "non_speculation": {
+            "type": "noul",
+            "instructions": "Is the reported event factual rather than speculative or hypothetical?",
+            "criteria": {
+                "true": "The wording reports a fact or formal action.",
+                "false": "The wording is rumor, prediction, possibility, opinion, or hypothetical.",
+            },
+        },
+        "market_impact": {
+            "type": "noul",
+            "instructions": (
+                "Can this event materially affect global financial markets, logistics, finance, energy, "
+                "or critical technology within hours?"
+            ),
+            "criteria": {
+                "true": "The event plausibly creates immediate and material cross-market or global disruption.",
+                "false": "Its likely effects are local, routine, minor, slow, or not market-relevant.",
+            },
+        },
+        "urgent": {
+            "type": "noul",
+            "instructions": "Does this event warrant an immediate breaking alert rather than the daily digest?",
+            "criteria": {
+                "true": "A market observer should be interrupted now.",
+                "false": "The daily digest is timely enough or the event is insufficiently consequential.",
+            },
+        },
+        "event_category": {
+            "type": "choice",
+            "instructions": "Choose the single category that best matches the supplied event.",
+            "criteria": {category: None for category in EMERGENCY_CATEGORIES},
+        },
+    }
+
+
+def _post_jev_json(
+    payload: dict[str, Any], api_key: str, timeout: int, max_retries: int,
+    initial_backoff_seconds: float, max_backoff_seconds: float,
+) -> dict[str, Any]:
+    for attempt in range(max_retries + 1):
+        try:
+            return _post_json(
+                "https://api.typesafe.ai/v1/systemone",
+                payload,
+                {"Authorization": f"Bearer {api_key}"},
+                timeout=timeout,
+            )
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 529) or attempt >= max_retries:
+                raise
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            try:
+                delay = float(retry_after) if retry_after else initial_backoff_seconds * (2 ** attempt)
+            except (TypeError, ValueError):
+                delay = initial_backoff_seconds * (2 ** attempt)
+            time.sleep(min(max_backoff_seconds, max(0.0, delay)))
+    raise RuntimeError("unreachable Jev retry state")
+
+
+def _parse_jev_review(payload: dict[str, Any], expected_category: str) -> dict[str, Any]:
+    answers = payload.get("answers")
+    if not isinstance(answers, dict):
+        raise ValueError("Jev response did not contain answers")
+
+    def probability(name: str) -> float:
+        answer = answers.get(name)
+        if not isinstance(answer, dict) or answer.get("type") != "noul":
+            raise ValueError(f"Jev answer {name} was not a noul")
+        value = answer.get("noul")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+            raise ValueError(f"Jev answer {name} was outside 0-1")
+        return float(value)
+
+    category_answer = answers.get("event_category")
+    if not isinstance(category_answer, dict) or category_answer.get("type") != "choice":
+        raise ValueError("Jev event_category was not a choice")
+    category = str(category_answer.get("choice", ""))
+    if category not in EMERGENCY_CATEGORIES:
+        category = expected_category if expected_category in EMERGENCY_CATEGORIES else "other"
+    confidence = category_answer.get("confidence", 0)
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+        confidence = 0
+    return {
+        "event_confirmed_probability": probability("event_confirmed"),
+        "same_event_probability": probability("same_event"),
+        "non_speculation_probability": probability("non_speculation"),
+        "market_impact_probability": probability("market_impact"),
+        "urgency_probability": probability("urgent"),
+        "event_category": category,
+        "category_confidence": min(1.0, max(0.0, float(confidence))),
+    }
+
+
+def review_emergency_alerts_with_jev(
+    database: NewsDatabase,
+    alerts: list[dict[str, Any]],
+    settings: dict[str, Any],
+    now: datetime,
+) -> tuple[list[dict[str, Any]], dict[str, int], list[str]]:
+    stats = {"sent": 0, "approved": 0, "cached": 0, "budget_skipped": 0}
+    errors: list[str] = []
+    jev_settings = settings.get("jev_review", {})
+    if not alerts or not jev_settings.get("enabled", True):
+        return [], stats, errors
+    api_key = os.getenv("TYPESAFE_API_KEY", "").strip()
+    if not api_key:
+        return [], stats, errors
+
+    now_jst = now.astimezone(ZoneInfo("Asia/Tokyo"))
+    day_start = datetime(
+        now_jst.year, now_jst.month, now_jst.day, tzinfo=now_jst.tzinfo
+    ).astimezone(timezone.utc).isoformat(timespec="seconds")
+    month_start = datetime(
+        now_jst.year, now_jst.month, 1, tzinfo=now_jst.tzinfo
+    ).astimezone(timezone.utc).isoformat(timespec="seconds")
+    daily_usage = database.emergency_jev_usage_since(day_start)
+    monthly_usage = database.emergency_jev_usage_since(month_start)
+    daily_limit = int(jev_settings.get("daily_request_limit", 500))
+    monthly_limit = int(jev_settings.get("monthly_request_limit", 30000))
+    monthly_budget = float(jev_settings.get("monthly_budget_usd", 1.0))
+    threshold = float(jev_settings.get("minimum_probability", 0.75))
+    model = str(jev_settings.get("model", "jev-latest"))
+    approved: list[dict[str, Any]] = []
+
+    for alert in alerts:
+        evidence_key = stable_id(JEV_EMERGENCY_REVIEW_VERSION, emergency_evidence_key(alert))
+        existing = database.emergency_jev_review(evidence_key)
+        if existing is not None and existing.get("status") == "completed":
+            stats["cached"] += 1
+            review = {
+                name: float(existing[name])
+                for name in (
+                    "event_confirmed_probability", "same_event_probability",
+                    "non_speculation_probability", "market_impact_probability",
+                    "urgency_probability", "category_confidence",
+                )
+            }
+            review["event_category"] = str(existing["event_category"])
+            passes = bool(existing["approved"])
+        else:
+            if (
+                daily_usage["requests"] + stats["sent"] >= daily_limit
+                or monthly_usage["requests"] + stats["sent"] >= monthly_limit
+                or monthly_usage["cost_usd"] >= monthly_budget
+            ):
+                stats["budget_skipped"] += 1
+                continue
+            try:
+                state = {
+                    "event_type": alert.get("event_type"),
+                    "event_state": alert.get("event_state"),
+                    "entity": alert.get("entity"),
+                    "confirmation": alert.get("confirmation"),
+                    "evidence": [
+                        {
+                            "title": item.get("title"),
+                            "domain": item.get("domain"),
+                            "seen_date": item.get("seen_date"),
+                        }
+                        for item in alert.get("evidence", [])
+                    ],
+                }
+                payload = _post_jev_json(
+                    {"state": state, "model": model, "questions": _jev_questions()},
+                    api_key,
+                    timeout=int(jev_settings.get("request_timeout_seconds", 15)),
+                    max_retries=int(jev_settings.get("max_retries", 2)),
+                    initial_backoff_seconds=float(jev_settings.get("initial_backoff_seconds", 1.0)),
+                    max_backoff_seconds=float(jev_settings.get("max_backoff_seconds", 10.0)),
+                )
+                review = _parse_jev_review(payload, str(alert.get("event_type", "other")))
+                passes = all(
+                    review[name] >= threshold
+                    for name in (
+                        "event_confirmed_probability", "same_event_probability",
+                        "non_speculation_probability", "market_impact_probability",
+                        "urgency_probability",
+                    )
+                )
+                usage = payload.get("usage", {})
+                input_tokens = int(usage.get("input_tokens", 0))
+                output_tokens = int(usage.get("output_tokens", 0))
+                estimated_cost = (
+                    input_tokens * float(jev_settings.get("input_usd_per_million", 0.042))
+                    + output_tokens * float(jev_settings.get("output_usd_per_million", 0.0))
+                ) / 1_000_000
+                database.record_emergency_jev_review({
+                    "review_id": stable_id("emergency-jev", JEV_EMERGENCY_REVIEW_VERSION, evidence_key),
+                    "evidence_key": evidence_key,
+                    "event_key": alert["event_key"],
+                    "event_state": alert["event_state"],
+                    "model": str(payload.get("model") or model),
+                    "status": "completed",
+                    **review,
+                    "approved": passes,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "estimated_cost_usd": estimated_cost,
+                    "raw": payload,
+                    "reviewed_at": now.isoformat(timespec="seconds"),
+                })
+                stats["sent"] += 1
+            except Exception as exc:
+                errors.append(f"{alert['event_key']}: Jev {type(exc).__name__}: {exc}")
+                continue
+        if passes:
+            enriched = dict(alert)
+            enriched["jev_review"] = review
+            approved.append(enriched)
+            stats["approved"] += 1
+    return approved, stats, errors
 
 
 def run_emergency_ai_self_test(

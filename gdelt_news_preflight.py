@@ -33,6 +33,10 @@ def main() -> int:
     print(f"Company aliases: {len(aliases)}")
     print(f"Operation stage: {stage}")
     print(f"AI review: {'on' if stage >= 3 else 'off'}")
+    print(
+        "Jev emergency review: "
+        + ("configured" if os.getenv("TYPESAFE_API_KEY", "").strip() else "inactive (TYPESAFE_API_KEY missing)")
+    )
     print(f"Email delivery: {'on' if stage >= 4 else 'off'}")
     print(f"Adaptive interval x: {adaptive.interval_minutes:g} minutes")
     print(f"Adaptive cooldown y: {adaptive.cooldown_hours:g} hours")
